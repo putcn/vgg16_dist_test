@@ -206,7 +206,7 @@ def main():
             pass_train_acc = train_pass_acc.eval()
             pass_test_acc = test(exe)
             print(
-                "**metrics_data: Pass = %d, Training performance(imgs/s) = %f, Train accuracy = %f, Test accuracy = %f\n"
+                "**metrics_data: pass = %d, train_speed = %f, train_accuracy = %f, test_accuracy = %f\n"
                 % (pass_id, num_samples / pass_elapsed, pass_train_acc,
                    pass_test_acc))
 
