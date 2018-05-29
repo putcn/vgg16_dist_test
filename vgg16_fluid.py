@@ -83,6 +83,9 @@ parser.add_argument(
 parser.add_argument(
     "--profile", action='store_true', help="If set, profile a few steps.")
 
+parser.add_argument(
+    "--acc_target", default=None, help="trianing will be terminated when acc_target reaches")
+
 # Flags for defining the tf.train.Server
 parser.add_argument(
     "--task_index", type=int, default=os.getenv("TRAINER_INDEX"), help="Index of task within the job")
@@ -180,6 +183,8 @@ def main():
         iters = 0
         ts = time.time()
         train_pass_acc = fluid.average.WeightedAverage()
+        acc_4passes = None
+        converge_speed = None
         for pass_id in range(args.num_passes):
             # train
             start_time = time.time()
@@ -215,19 +220,33 @@ def main():
                 loss, acc, b_size = run_step(batch_id, data)
                 iters += 1
                 num_samples += len(data)
+                if iters == 4:
+                    acc_4passes = acc
                 train_pass_acc.add(value=acc, weight=b_size)
                 print(
                     "Pass = %d, Iters = %d, Loss = %f, Accuracy = %f, "
                     "Speed = %.2f img/s" % (pass_id, iters, loss, acc,
                                             len(data) / (time.time() - ts))
                 )  # The accuracy is the accumulation of batches, but not the current batch.
+                # terminate training when acc_target reaches
+                if args.acc_target and acc >= args.acc_target:
+                    converge_speed = time.time() - start_time
 
             pass_elapsed = time.time() - start_time
             pass_train_acc = train_pass_acc.eval()
             pass_test_acc = test(exe)
-            print("**metrics_data: pass = %d, train_speed = %f, train_accuracy = %f, test_accuracy = %f\n" %
-                  (pass_id, num_samples / pass_elapsed,
-                   pass_train_acc, pass_test_acc))
+
+            msgs = []
+            msgs.append("pass = %d" % pass_id)
+            msgs.append("train_speed = %f" % num_samples / pass_elapsed)
+            msgs.append("train_accuracy = %f" % pass_train_acc)
+            msgs.append("test_accuracy = %f" % pass_test_acc)
+            if isinstance(acc_4passes, float):
+                msgs.append("acc_4passes = %f" % acc_4passes)
+            if isinstance(converge_speed, int):
+                msgs.append("converge_speed = %d" % converge_speed)
+
+            print("**metrics_data: " + ", ".join(msgs))
 
     if args.local:
         # Parameter initialization
