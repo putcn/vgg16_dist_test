@@ -220,8 +220,6 @@ def main():
                 loss, acc, b_size = run_step(batch_id, data)
                 iters += 1
                 num_samples += len(data)
-                if iters == 4:
-                    acc_4passes = acc
                 train_pass_acc.add(value=acc, weight=b_size)
                 print(
                     "Pass = %d, Iters = %d, Loss = %f, Accuracy = %f, "
@@ -235,6 +233,9 @@ def main():
             pass_elapsed = time.time() - start_time
             pass_train_acc = train_pass_acc.eval()
             pass_test_acc = test(exe)
+
+            if pass_id == 4:
+                acc_4passes = pass_train_acc
 
             msgs = []
             msgs.append("pass = %d" % pass_id)
